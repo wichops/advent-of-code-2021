@@ -21,7 +21,7 @@ mod solution {
         collections::{BinaryHeap, HashMap, HashSet},
     };
 
-    use crate::{print_board, read_input, Board};
+    use crate::{read_input, Board};
 
     const DIRECTIONS: [(isize, isize); 4] = [(0, 1), (0, -1), (-1, 0), (1, 0)];
     type Pos = (isize, isize);
@@ -121,17 +121,48 @@ mod solution {
         distances[&(*right, *bottom)]
     }
 
-    pub fn solve(file: &str) -> i32 {
-        let lines = read_input(file);
-        let input = parse_input(lines);
+    pub fn solve(board: &Board) -> i32 {
+        dikjstra(board, (0isize, 0isize))
+    }
 
-        dikjstra(&input, (0isize, 0isize))
+    pub fn multiply_board(file: &str, times: i32) -> Board {
+        let lines = read_input(file);
+
+        let mut board = parse_input(lines);
+        let copy = board.clone();
+
+        for _ in 0..times {
+            for (index, row) in board.iter_mut().enumerate() {
+                row.extend_from_slice(&copy[index][..]);
+            }
+        }
+
+        let mut new_board = board.clone();
+
+        for _ in 0..times {
+            new_board.extend_from_slice(&board[..]);
+        }
+
+        for (i, row) in new_board.iter_mut().enumerate() {
+            for (j, cell) in row.iter_mut().enumerate() {
+                let quadrant_value = (i / copy.len()) + (j / copy.len());
+                let n = (*cell + quadrant_value as i32) % 9;
+
+                *cell = match n {
+                    0 => 9,
+                    _ => n,
+                };
+            }
+        }
+
+        new_board
     }
 }
 
 fn main() {
     let input = include_str!("input.txt");
-    let result = solution::solve(input);
+    let expanded_board = solution::multiply_board(input, 4);
+    let result = solution::solve(&expanded_board);
 
     println!("{:?}", result);
 }
@@ -144,8 +175,41 @@ mod tests {
     fn test_two_days() {
         let input = include_str!("test_input.txt");
 
-        let result = solution::solve(input);
+        let result = solution::solve(&solution::parse_input(read_input(input)));
         let expected = 40;
+
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_multiply_board() {
+        let input = include_str!("test_multiply.txt");
+        let output = include_str!("test_result_multiply.txt");
+
+        let result = solution::parse_input(read_input(output));
+        let expected = solution::multiply_board(input, 2);
+
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_input_multiply() {
+        let input = include_str!("test_input.txt");
+        let output = include_str!("test_input_multiply.txt");
+
+        let result = solution::parse_input(read_input(output));
+        let expected = solution::multiply_board(input, 4);
+
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_solve_multiplied() {
+        let input = include_str!("test_input.txt");
+        let board = solution::multiply_board(input, 4);
+
+        let result = solution::solve(&board);
+        let expected = 315;
 
         assert_eq!(result, expected);
     }
